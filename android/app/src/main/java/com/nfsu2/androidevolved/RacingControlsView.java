@@ -47,6 +47,8 @@ final class RacingControlsView extends View {
     private boolean lastGameMode;
     private boolean editing;
     private boolean hiddenByGamepad;
+    /** Makro: menekan tombol NOS (N2O, scan 0x38) otomatis menahan pedal gas (scan 0xc8) juga. Gas saja tidak menyalakan NOS. */
+    private boolean macroNos;
     private boolean gamepadConnected;
     private Control selected;
     private int dragPointer = -1;
@@ -71,6 +73,7 @@ final class RacingControlsView extends View {
         layouts=context.getSharedPreferences("touch_layouts_v1",Context.MODE_PRIVATE);
         style=layouts.getString("style","classic");this.configureTilt=configureTilt;this.configureFrameLimit=configureFrameLimit;
         setContentDescription("Kontrol game");
+        macroNos=layouts.getBoolean("macro_nos",true);
         setHapticFeedbackEnabled(true);
         line.setStyle(Paint.Style.STROKE);line.setStrokeCap(Paint.Cap.ROUND);line.setStrokeJoin(Paint.Join.ROUND);
         text.setTextAlign(Paint.Align.CENTER);text.setTypeface(Typeface.create("sans-serif-condensed",Typeface.BOLD));
@@ -178,7 +181,7 @@ final class RacingControlsView extends View {
         canvas.restore();
     }
     private void drawControl(Canvas canvas,Control c) {
-        boolean on=c.held>0, picked=editing&&c==selected;
+        boolean on=c.held>0||(c.shape==PEDAL&&c.scan==0xc8&&gasWanted()), picked=editing&&c==selected;
         float cx=c.area.centerX(),cy=c.area.centerY(),r=Math.min(c.area.width(),c.area.height())/2;
         int ink=on?ACCENT:0xE6FFFFFF;
         line.setStrokeWidth(Math.max(1.6f,r*.06f));
@@ -339,10 +342,14 @@ final class RacingControlsView extends View {
     }
     private void showOptions() {
         new AlertDialog.Builder(getContext()).setTitle("Opsi kontrol")
-                .setItems(new String[]{"Gaya: klasik / Xbox / PlayStation","Kemudi dengan kemiringan","Batas FPS","Simpan tata letak dengan nama","Muat tata letak kustom"},(dialog,which)->{
+                .setItems(new String[]{"Gaya: klasik / Xbox / PlayStation","Kemudi dengan kemiringan","Batas FPS","Simpan tata letak dengan nama","Muat tata letak kustom","Makro NOS + gas: "+(macroNos?"AKTIF":"MATI")},(dialog,which)->{
                     if(which==0)chooseStyle();else if(which==1)configureTilt.run();
-                    else if(which==2)configureFrameLimit.run();else if(which==3)saveNamedLayout();else loadNamedLayout();
+                    else if(which==2)configureFrameLimit.run();else if(which==3)saveNamedLayout();else if(which==4)loadNamedLayout();else toggleMacro();
                 }).setNegativeButton("Tutup",null).show();
+    }
+    private void toggleMacro() {
+        releaseAll();macroNos=!macroNos;layouts.edit().putBoolean("macro_nos",macroNos).apply();
+        Toast.makeText(getContext(),macroNos?"Makro aktif: menekan NOS otomatis menekan gas":"Makro mati",Toast.LENGTH_SHORT).show();
     }
     private void chooseStyle() {
         String[] ids={"classic","xbox","playstation"};
@@ -408,11 +415,19 @@ final class RacingControlsView extends View {
     private void hold(Control c) {
         if(c==null||++c.held!=1)return;
         if(c.scan>=0)keys.set(c.scan,true);
+        if(racing&&(c.scan==0xc8||c.scan==0x38))keys.set(0xc8,gasWanted());
         performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
+    }
+    /** Gas harus tertekan jika pedal gas ditahan, atau (makro aktif) tombol NOS ditahan. */
+    private boolean gasWanted() {
+        for(Control c:controls) if(c.shape==PEDAL&&c.scan==0xc8&&c.held>0) return true;
+        if(macroNos&&racing) for(Control c:controls) if(c.scan==0x38&&c.held>0) return true;
+        return false;
     }
     private void release(Control c) { if(c!=null && --c.held==0) {
         if(c.scan>=0)keys.set(c.scan,false);
         else if(c.scan==STICK) {c.steering=0;keys.set(0xcb,false);keys.set(0xcd,false);}
+        if(racing&&(c.scan==0xc8||c.scan==0x38))keys.set(0xc8,gasWanted());
     } }
     private void steer(Control c,float x) {
         c.steering=Math.max(-1,Math.min(1,(x/scale-c.area.centerX())/(c.area.width()/2)));

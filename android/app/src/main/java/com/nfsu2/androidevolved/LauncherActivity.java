@@ -165,12 +165,6 @@ public final class LauncherActivity extends Activity {
         accessParams.topMargin = dp(10);
         left.addView(access, accessParams);
 
-        Button channel = actionButton("Kanal resmi developer", false);
-        channel.setOnClickListener(view -> openChannel());
-        LinearLayout.LayoutParams channelParams = new LinearLayout.LayoutParams(-1, dp(46));
-        channelParams.topMargin = dp(10);
-        left.addView(channel, channelParams);
-
         // Right: options.
         LinearLayout right = card();
         LinearLayout.LayoutParams rightParams = new LinearLayout.LayoutParams(0, -1, 1f);
