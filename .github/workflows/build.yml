@@ -1,12 +1,15 @@
-name: Build APK (Java saja, .so dari rilis resmi)
+name: Build APK (Java saja, .so dari release repo ini)
 
 on:
   workflow_dispatch:
     inputs:
-      apk_url:
-        description: "URL langsung APK arm64 rilis resmi (sumber file .so)"
+      release_tag:
+        description: "Tag release di repo ini yang berisi 6 file .so"
         required: true
-        default: "https://github.com/codepdbh/nfsu2-recompiled/releases/download/v0.14.9/NFSU2-AndroidEvolved-v0.14.9-arm64.apk"
+        default: "so-files"
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -23,11 +26,14 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Ambil file .so dari APK rilis resmi
+      - name: Ambil file .so dari release repo ini
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          curl -L --fail -o official.apk "${{ inputs.apk_url }}"
           mkdir -p android/app/src/main/jniLibs/arm64-v8a
-          unzip -j -o official.apk 'lib/arm64-v8a/*.so' -d android/app/src/main/jniLibs/arm64-v8a
+          gh release download "${{ inputs.release_tag }}" --repo "${{ github.repository }}" \
+            --pattern '*.so' --dir android/app/src/main/jniLibs/arm64-v8a
+          rm -f android/app/src/main/jniLibs/arm64-v8a/*Notnolib*
           ls -l android/app/src/main/jniLibs/arm64-v8a
 
       - name: Cek kecocokan fungsi native (hanya peringatan)
