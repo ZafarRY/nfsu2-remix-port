@@ -47,8 +47,22 @@ jobs:
               || echo "::warning::Fungsi native '$n' tidak ada di .so; versi .so mungkin tidak cocok dengan kode Java"
           done
 
+      - name: Siapkan keystore (jika ada)
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/nfsu2.jks"
+            echo "KEYSTORE_FILE=$RUNNER_TEMP/nfsu2.jks" >> "$GITHUB_ENV"
+            echo "Memakai keystore sendiri"
+          else
+            echo "::warning::Secret KEYSTORE_BASE64 belum diisi; memakai kunci debug bawaan"
+          fi
+
       - name: Build APK
         working-directory: android
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug

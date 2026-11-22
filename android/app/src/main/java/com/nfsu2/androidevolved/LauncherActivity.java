@@ -225,7 +225,8 @@ public final class LauncherActivity extends Activity {
             optionsList.addView(optionRow(option.title, option.label(GameOptions.get(this, option.key)), () -> chooseOption(option)));
         optionsList.addView(optionRow("Server online", GameOptions.onlineServer(this), this::chooseOnlineServer));
         optionsList.addView(optionRow("Cek pembaruan",
-                checkingUpdates ? "Memeriksa GitHub…" : "Versi " + ReleaseUpdates.installed(this), () -> checkUpdates(true)));
+                !ReleaseUpdates.UPDATE_CHECK ? "Dimatikan · versi " + ReleaseUpdates.installed(this)
+                        : checkingUpdates ? "Memeriksa GitHub…" : "Versi " + ReleaseUpdates.installed(this), () -> checkUpdates(true)));
         optionsList.addView(optionRow("Laporkan masalah", "Log lengkap ke GitHub", () -> prepareReport(null)));
     }
 
@@ -407,6 +408,11 @@ public final class LauncherActivity extends Activity {
     // ---- Updates and reports ---------------------------------------------------------------------------
 
     private void checkUpdates(boolean manual) {
+        if (!ReleaseUpdates.UPDATE_CHECK) {
+            if (manual) message("Pembaruan", "Cek pembaruan dimatikan pada build kustom ini. Versi terpasang: "
+                    + ReleaseUpdates.installed(this) + ".");
+            return;
+        }
         if (checkingUpdates) return;
         checkingUpdates = true;
         if (optionsList != null) refreshOptions();

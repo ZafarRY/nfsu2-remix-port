@@ -8,9 +8,26 @@ android {
         targetSdk 35
         versionCode 32
         versionName '0.14.17'
-        // Mode Java-saja: library native (.so) diambil dari APK rilis resmi
+        // Mode Java-saja: library native (.so) diambil dari release repo sendiri
         // dan ditaruh di app/src/main/jniLibs/arm64-v8a/ (lihat build.yml).
         ndk { abiFilters(project.findProperty('nfsAbi') ?: 'arm64-v8a') }
+    }
+    // Keystore tetap: aktif hanya jika build.yml mengisi KEYSTORE_FILE dari GitHub Secrets.
+    // Tanpa itu, dipakai kunci debug bawaan seperti biasa.
+    signingConfigs {
+        if (System.getenv('KEYSTORE_FILE')) {
+            create('custom') {
+                storeFile file(System.getenv('KEYSTORE_FILE'))
+                storePassword System.getenv('KEYSTORE_PASSWORD')
+                keyAlias 'nfsu2'
+                keyPassword System.getenv('KEYSTORE_PASSWORD')
+            }
+        }
+    }
+    buildTypes {
+        debug {
+            if (System.getenv('KEYSTORE_FILE')) signingConfig signingConfigs.getByName('custom')
+        }
     }
     // adrenotools opens its namespace hook libraries by path from nativeLibraryDir.
     packaging { jniLibs { useLegacyPackaging true } }

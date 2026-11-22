@@ -17,6 +17,8 @@ import javax.net.ssl.HttpsURLConnection;
 /** Optional official GitHub updates. No APK is installed or downloaded in the background. */
 final class ReleaseUpdates {
     private static final String REPO = "https://github.com/codepdbh/nfsu2-recompiled/";
+    /** false = tidak mengecek rilis repo asli (ini build kustom terjemahan; tanda tangan APK berbeda). */
+    static final boolean UPDATE_CHECK = false;
     private static final String API = "https://api.github.com/repos/codepdbh/nfsu2-recompiled/releases/latest";
     static final class Result {
         final String tag, url, error;
