@@ -136,7 +136,7 @@ public final class LauncherActivity extends Activity {
         LinearLayout titles = new LinearLayout(this);
         titles.setOrientation(LinearLayout.VERTICAL);
         titles.setPadding(dp(14), 0, 0, 0);
-        titles.addView(label("Need for Speed Underground 2", 18, Color.WHITE, true));
+        titles.addView(label("NFSU2 Remix Indonesia", 18, Color.WHITE, true));
         titles.addView(label("PC · direkompilasi secara native untuk Android", 12, 0x99FFFFFF, false));
         header.addView(titles);
         left.addView(header, new LinearLayout.LayoutParams(-1, -2));
