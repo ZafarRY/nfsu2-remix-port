@@ -1,0 +1,17 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'com.nfsu2.androidevolved'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'com.nfsu2.androidevolved'
+        minSdk 29
+        targetSdk 35
+        versionCode 32
+        versionName '0.14.17'
+        // Mode Java-saja: library native (.so) diambil dari APK rilis resmi
+        // dan ditaruh di app/src/main/jniLibs/arm64-v8a/ (lihat build.yml).
+        ndk { abiFilters(project.findProperty('nfsAbi') ?: 'arm64-v8a') }
+    }
+    // adrenotools opens its namespace hook libraries by path from nativeLibraryDir.
+    packaging { jniLibs { useLegacyPackaging true } }
+}
