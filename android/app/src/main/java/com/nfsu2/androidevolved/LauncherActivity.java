@@ -38,7 +38,7 @@ import java.util.concurrent.Executors;
 public final class LauncherActivity extends Activity {
     private static final int REQUEST_DRIVER_ZIP = 45, REQUEST_DRIVER_PROBE = 46;
     // NFSU2 green.
-    private static final int ACCENT = 0xFF8EE03A;
+    private static final int ACCENT = 0xFF5AA9FF;   // biru neon (sesuai logo)
     /** {label, guest language name, LANGUAGES/<file>.bin}. */
     private static final String[][] LANGUAGES = {
         {"Español", "Spanish", "Spanish"}, {"English", "English UK", "English"},
@@ -113,7 +113,7 @@ public final class LauncherActivity extends Activity {
     private View buildScreen() {
         FrameLayout screen = new FrameLayout(this);
         screen.setBackground(new GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                new int[] {0xFF060D08, 0xFF0B2210, 0xFF060D08}));
+                new int[] {0xFF05061A, 0xFF160B3D, 0xFF05061A}));
         LinearLayout columns = new LinearLayout(this);
         columns.setPadding(dp(24), dp(10), dp(24), dp(10));
         screen.addView(columns, new FrameLayout.LayoutParams(-1, -1));
@@ -565,7 +565,7 @@ public final class LauncherActivity extends Activity {
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setPadding(dp(12), dp(8), dp(12), dp(8));
         GradientDrawable bg = new GradientDrawable();
-        bg.setColor(0x168EE03A);
+        bg.setColor(0x185AA9FF);
         bg.setCornerRadius(dp(10));
         row.setBackground(bg);
         row.setClickable(true);
@@ -585,30 +585,23 @@ public final class LauncherActivity extends Activity {
         card.setOrientation(LinearLayout.VERTICAL);
         card.setPadding(dp(16), dp(12), dp(16), dp(12));
         GradientDrawable bg = new GradientDrawable();
-        bg.setColor(0xCC0E1A12);
+        bg.setColor(0xCC0B0C2E);
         bg.setCornerRadius(dp(16));
-        bg.setStroke(dp(1), 0x448EE03A);
+        bg.setStroke(dp(1), 0x665AA9FF);
         card.setBackground(bg);
         return card;
-    }
-
-    // The ports' official developer channel.
-    static final String CHANNEL = "https://www.youtube.com/@daniel54bhp";
-    private void openChannel() {
-        try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(CHANNEL))); }
-        catch (android.content.ActivityNotFoundException e) { android.widget.Toast.makeText(this, CHANNEL, android.widget.Toast.LENGTH_LONG).show(); }
     }
 
     private Button actionButton(String text, boolean primary) {
         Button b = new Button(this);
         b.setText(text);
         b.setAllCaps(false);
-        b.setTextColor(primary ? 0xFF0A1C05 : Color.WHITE);
+        b.setTextColor(Color.WHITE);
         b.setTextSize(TypedValue.COMPLEX_UNIT_SP, primary ? 22 : 15);
         b.setTypeface(Typeface.DEFAULT_BOLD);
         b.setLetterSpacing(primary ? .12f : 0f);
         GradientDrawable bg = primary
-                ? new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, new int[] {0xFFB8F25A, 0xFF3FB82A})
+                ? new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, new int[] {0xFFE83DFF, 0xFF7A3DFF})
                 : new GradientDrawable();
         if (!primary) { bg.setColor(0x22FFFFFF); bg.setStroke(dp(1), 0x55FFFFFF); }
         bg.setCornerRadius(dp(14));
