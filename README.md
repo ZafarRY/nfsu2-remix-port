@@ -17,7 +17,7 @@ Issue-driven changes and remaining limits: [16 October review](docs/ISSUE_REVIEW
 
 <div align="center">
 
-<img src="docs/images/logo.png" alt="NFSU2 Android Evolved Logo" width="220" />
+<img src="ICONO/ICONO.png" alt="NFSU2 Remix Logo" width="220" />
 
 ### **Static Recompilation of SPEED2.EXE into Native C (x86 & ARM64)**
 
