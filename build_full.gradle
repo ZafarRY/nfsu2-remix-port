@@ -1,0 +1,35 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'com.zafar.nfsu2remix'
+    compileSdk 35
+    ndkVersion '28.2.13676358'
+    defaultConfig {
+        applicationId 'com.zafar.nfsu2remix'
+        minSdk 29
+        targetSdk 35
+        versionCode 32
+        versionName '0.10.0'
+        // -PnfsAbi=armeabi-v7a builds the separate 32-bit APK.
+        ndk { abiFilters(project.findProperty('nfsAbi') ?: 'arm64-v8a') }
+        externalNativeBuild { cmake { arguments '-DANDROID_STL=c++_static' } }
+    }
+    externalNativeBuild { cmake { path file('src/main/cpp/CMakeLists.txt'); version '3.30.5' } }
+    // Keystore tetap: aktif hanya jika KEYSTORE_FILE diisi (lihat build.yml). Tanpa itu, kunci debug bawaan.
+    signingConfigs {
+        if (System.getenv('KEYSTORE_FILE')) {
+            create('custom') {
+                storeFile file(System.getenv('KEYSTORE_FILE'))
+                storePassword System.getenv('KEYSTORE_PASSWORD')
+                keyAlias 'nfsu2'
+                keyPassword System.getenv('KEYSTORE_PASSWORD')
+            }
+        }
+    }
+    buildTypes {
+        debug {
+            if (System.getenv('KEYSTORE_FILE')) signingConfig signingConfigs.getByName('custom')
+        }
+    }
+    // adrenotools opens its namespace hook libraries by path from nativeLibraryDir.
+    packaging { jniLibs { useLegacyPackaging true } }
+}
