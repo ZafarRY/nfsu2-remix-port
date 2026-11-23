@@ -7,9 +7,13 @@ on:
         description: "Tag release di repo ini yang berisi 6 file .so"
         required: true
         default: "so-zafar"
+      version_tag:
+        description: "Tag release baru untuk APK (contoh: v1.0.1). Kosongkan = tidak upload ke Release"
+        required: false
+        default: ""
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -71,3 +75,21 @@ jobs:
         with:
           name: NFSU2-Remix-apk
           path: android/app/build/outputs/apk/debug/*.apk
+
+      - name: Upload APK ke Release (hanya jika build berhasil)
+        if: ${{ inputs.version_tag != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.version_tag }}
+        run: |
+          APK=$(ls android/app/build/outputs/apk/debug/*.apk | head -n1)
+          cp "$APK" nfsu2-remix.apk
+          if gh release view "$TAG" --repo "${{ github.repository }}" > /dev/null 2>&1; then
+            gh release upload "$TAG" nfsu2-remix.apk --clobber --repo "${{ github.repository }}"
+          else
+            gh release create "$TAG" nfsu2-remix.apk \
+              --repo "${{ github.repository }}" \
+              --title "NFSU2 Remix $TAG" \
+              --notes "Fix: overlay status tidak hilang otomatis di semua bahasa." \
+              --target "${{ github.sha }}"
+          fi
