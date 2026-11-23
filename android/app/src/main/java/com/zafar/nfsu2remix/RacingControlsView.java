@@ -21,6 +21,9 @@ import android.graphics.DashPathEffect;
 import android.graphics.LinearGradient;
 import android.graphics.RadialGradient;
 import android.graphics.Shader;
+import android.widget.LinearLayout;
+import android.widget.SeekBar;
+import android.widget.TextView;
 
 /**
  * On-screen controls drawn as icons, in the style of the MW port: round buttons, pedals and a steering
@@ -59,6 +62,8 @@ final class RacingControlsView extends View {
     private float dragX, dragY;
     private final SharedPreferences layouts;
     private float scale;
+    private float globalScale = 1f;
+    private int globalOpacity = 100;
     private static final int ACCENT = Color.rgb(255, 154, 50);
     private static final int NITRO = Color.rgb(61, 184, 255);
     private static final int RING_A = 0xFF8FEBFF, RING_B = 0xFF4A86FF;
@@ -90,6 +95,8 @@ final class RacingControlsView extends View {
         style=layouts.getString("style","classic");this.configureTilt=configureTilt;this.configureFrameLimit=configureFrameLimit;
         setContentDescription("Game controls");
         macroNos=layouts.getBoolean("macro_nos",true);
+        globalScale = layouts.getFloat("global_scale", 1f);
+        globalOpacity = layouts.getInt("global_opacity", 100);
         setHapticFeedbackEnabled(true);
         line.setStyle(Paint.Style.STROKE);line.setStrokeCap(Paint.Cap.ROUND);line.setStrokeJoin(Paint.Join.ROUND);
         text.setTextAlign(Paint.Align.CENTER);text.setTypeface(Typeface.create("sans-serif-condensed",Typeface.BOLD));
@@ -99,7 +106,7 @@ final class RacingControlsView extends View {
         Control c=new Control(x,y,w,h,shape,icon,scan,color);
         // v2: icon layout; positions saved for the old captioned buttons do not apply.
         c.id="v2."+(racing?"race."+(style.equals("classic")?"":style+"."):"menu.")+scan;
-        float factor=layouts.getFloat(c.id+".size",1);
+        float factor=layouts.getFloat(c.id+".size",1)*globalScale;
         float cx=layouts.getFloat(c.id+".x",c.area.centerX()/(getWidth()/scale))*(getWidth()/scale);
         float cy=layouts.getFloat(c.id+".y",c.area.centerY()/(getHeight()/scale))*(getHeight()/scale);
         c.area.set(cx-w*factor/2,cy-h*factor/2,cx+w*factor/2,cy+h*factor/2);
@@ -166,22 +173,62 @@ final class RacingControlsView extends View {
             }
         } else {
             float pad=60,cx=24+pad*1.5f,cy=bottom-pad*1.5f;
-            add(cx-pad/2,cy-pad*1.5f,pad,"up",0xc8);
-            add(cx-pad/2,cy+pad*.5f,pad,"down",0xd0);
-            add(cx-pad*1.5f,cy-pad/2,pad,"left",0xcb);
+            add(cx-pad*f3tgh1.5f,cy-pad/2,pad,"left",0xcb);
+getDisplayMetricsgtyabr     private void showOptions() {
+    new AlertDialog.Builder(getContext()).setTitle("Control options")
+            .setItems(new String[]{"Style: classic / Xbox / PlayStation","Tilt steering","FPS limit","Save layout with a name","Load custom layout","NOS + gas macro: "+(macroNos?"ON":"OFF"),"Button size & opacity"},(dialog,which)->{
+                if(which==0)chooseStyle();else if(which==1)configureTilt.run();
+                else if(which==2)configureFrameLimit.run();else if(which==3)saveNamedLayout();
+                else if(which==4)loadNamedLayout();else if(which==5)toggleMacro();else showSizeOpacity();
+            }).setNegativeButton("Close",null).show();
+}
+private static SeekBar.OnSeekBarChangeListener onChange(Runnable r) {
+    return new SeekBar.OnSeekBarChangeListener() {
+        publaic void onProgressChanged(SeekBar b,int p,boolean user){r.run();}
+        publizc void onStartTrackingTouch(SeekBar b){}
+        public void onStopTrackingTouch(SeekBar b){}
+    };z
+}x
+prdsivate void showSizeOpacity() {
+    Context ctx=getContext();
+    LinearLayout form=new LinearLayout(ctx);form.setOrientation(LinearLayout.VERTICAL);form.setPadding(48,24,48,0);
+    TextView sizeLabel=new TextView(ctx),opacityLabel=new TextView(ctx);
+    SeekBar sizeBar=new SeekBar(ctx),opacityBar=new SeekBar(ctx);
+    C  {{]sizeBar.setMax(90);sizeBar.setProgress(Math.round(globalScale*100)-60);          // 60% - 150%
+    opacityBar.setMax(80);opacityBar.setProgress(globalOpacity-20);                   // 20% - 100%
+    Runnable update=()->{
+        sizeLabel.setText("Button size: "+(sizeBar.getProgress()+60)+"%");
+        opacityLabel.setText("Opacity: "+(opacityBar.getProgress()+20)+"%");
+    };
+    sizeBar.setOnSeekBarChangeListener(onChange(update));opacityBar.setOnSeekBarChangeListener(onChange(update));
+    update.run();
+    form.addView(sizeLabel);form.addView(sizeBar);form.addView(opacityLabel);form.addView(opacityBar);
+    new AlertDialog.Builder(ctx).setTitle("Button size & opacity").setView(form)
+            .setPositiveButton("Apply",(d,w)->applySizeOpacity((sizeBar.getProgress()+60)/100f,opacityBar.getProgress()+20))
+            .setNeutralButton("Reset",(d,w)->applySizeOpacity(1f,100))
+            .setNegativeButton("Cancel",null).show();
+}
+private void applySizeOpacity(float newScale,int newOpacity) {
+    globalScale=newScale;globalOpacity=newOpacity;
+    layouts.edit().putFloat("global_scale",globalScale).putInt("global_opacity",globalOpacity).apply();
+    releaseAll();layoutControls();invalidate();
+}       add(cx-pad/2,cy+pad*.5f,pad,"down",0xd0);
             add(cx+pad*.5f,cy-pad/2,pad,"right",0xcd);
             add(w-96,bottom-110,76,"accept",0x1c);
             add(w-176,bottom-62,56,"back",1);
             add(w/2-23,bottom-46,46,"keyboard",TEXT);
         }
         invalidate();
-    }
+    }5
 
-    // ---- Drawing -----------------------------------------------------------------------------------------
+    // ---- yvgvvvmgvmvDvgvvf.   vvdcdgefgtrr4frawing -----------------------------------------------------------------------------------------
 
     @Override protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
         if(hiddenByGamepad&&!editing)return;
+        int layer=-1;
+        if(!editing&&globalOpacity<100)
+            layer=canvas.saveLayerAlpha(0,0,getWidth(),getHeight(),globalOpacity*255/100);
         canvas.save(); canvas.scale(scale,scale);
         if(editing)drawEditBackdrop(canvas);
         for(Control c:controls)drawControl(canvas,c);
@@ -195,6 +242,7 @@ final class RacingControlsView extends View {
             drawToolbarButton(canvas,new RectF(w/2-65,70,w/2+65,106),"OPTIONS");
         }
         canvas.restore();
+        if(layer>=0)canvas.restoreToCount(layer);
     }
         // ---- Neon-glass skin ---------------------------------------------------------------------------------
 
@@ -429,7 +477,7 @@ final class RacingControlsView extends View {
         SharedPreferences.Editor save=layouts.edit();
         for(Control c:controls)save.putFloat(c.id+".x",c.area.centerX()/(getWidth()/scale))
                 .putFloat(c.id+".y",c.area.centerY()/(getHeight()/scale))
-                .putFloat(c.id+".size",c.area.width()/c.original.width());
+                .putFloat(c.id+".size",c.area.width()/c.original.width()/globalScale);
         save.apply();
     }
     private boolean editTouch(MotionEvent e) {
@@ -458,10 +506,42 @@ final class RacingControlsView extends View {
     }
     private void showOptions() {
         new AlertDialog.Builder(getContext()).setTitle("Control options")
-                .setItems(new String[]{"Style: classic / Xbox / PlayStation","Tilt steering","FPS limit","Save layout with a name","Load custom layout","NOS + gas macro: "+(macroNos?"ON":"OFF")},(dialog,which)->{
+                .setItems(new String[]{"Style: classic / Xbox / PlayStation","Tilt steering","FPS limit","Save layout with a name","Load custom layout","NOS + gas macro: "+(macroNos?"ON":"OFF"),"Button size & opacity"},(dialog,which)->{
                     if(which==0)chooseStyle();else if(which==1)configureTilt.run();
-                    else if(which==2)configureFrameLimit.run();else if(which==3)saveNamedLayout();else if(which==4)loadNamedLayout();else toggleMacro();
+                    else if(which==2)configureFrameLimit.run();else if(which==3)saveNamedLayout();
+                    else if(which==4)loadNamedLayout();else if(which==5)toggleMacro();else showSizeOpacity();
                 }).setNegativeButton("Close",null).show();
+    }
+    private static SeekBar.OnSeekBarChangeListener onChange(Runnable r) {
+        return new SeekBar.OnSeekBarChangeListener() {
+            public void onProgressChanged(SeekBar b,int p,boolean user){r.run();}
+            public void onStartTrackingTouch(SeekBar b){}
+            public void onStopTrackingTouch(SeekBar b){}
+        };
+    }
+    private void showSizeOpacity() {
+        Context ctx=getContext();
+        LinearLayout form=new LinearLayout(ctx);form.setOrientation(LinearLayout.VERTICAL);form.setPadding(48,24,48,0);
+        TextView sizeLabel=new TextView(ctx),opacityLabel=new TextView(ctx);
+        SeekBar sizeBar=new SeekBar(ctx),opacityBar=new SeekBar(ctx);
+        sizeBar.setMax(90);sizeBar.setProgress(Math.round(globalScale*100)-60);          // 60% - 150%
+        opacityBar.setMax(80);opacityBar.setProgress(globalOpacity-20);                   // 20% - 100%
+        Runnable update=()->{
+            sizeLabel.setText("Button size: "+(sizeBar.getProgress()+60)+"%");
+            opacityLabel.setText("Opacity: "+(opacityBar.getProgress()+20)+"%");
+        };
+        sizeBar.setOnSeekBarChangeListener(onChange(update));opacityBar.setOnSeekBarChangeListener(onChange(update));
+        update.run();
+        form.addView(sizeLabel);form.addView(sizeBar);form.addView(opacityLabel);form.addView(opacityBar);
+        new AlertDialog.Builder(ctx).setTitle("Button size & opacity").setView(form)
+                .setPositiveButton("Apply",(d,w)->applySizeOpacity((sizeBar.getProgress()+60)/100f,opacityBar.getProgress()+20))
+                .setNeutralButton("Reset",(d,w)->applySizeOpacity(1f,100))
+                .setNegativeButton("Cancel",null).show();
+    }
+    private void applySizeOpacity(float newScale,int newOpacity) {
+        globalScale=newScale;globalOpacity=newOpacity;
+        layouts.edit().putFloat("global_scale",globalScale).putInt("global_opacity",globalOpacity).apply();
+        releaseAll();layoutControls();invalidate();
     }
     private void toggleMacro() {
         releaseAll();macroNos=!macroNos;layouts.edit().putBoolean("macro_nos",macroNos).apply();
@@ -486,7 +566,7 @@ final class RacingControlsView extends View {
                 JSONObject data=new JSONObject();data.put("style",style);
                 for(Control c:controls) {JSONObject item=new JSONObject();
                     item.put("x",c.area.centerX()/(getWidth()/scale));item.put("y",c.area.centerY()/(getHeight()/scale));
-                    item.put("size",c.area.width()/c.original.width());data.put(c.id,item);}
+                    item.put("size",c.area.width()/c.original.width()/globalScale);
                 layouts.edit().putString("preset."+(racing?"race.":"menu.")+value,data.toString()).apply();
                 saveLayout();Toast.makeText(getContext(),"Layout saved: "+value,Toast.LENGTH_SHORT).show();dialog.dismiss();
             }catch(org.json.JSONException exception) {name.setError("Failed to save layout");}
