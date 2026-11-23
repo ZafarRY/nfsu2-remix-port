@@ -89,19 +89,19 @@ final class GpuAdvice {
     static String advice(Family family) {
         switch (family) {
             case ADRENO_TURNIP:
-                return "Disarankan untuk Snapdragon-mu: Turnip (Mesa) untuk Adreno 6xx/7xx jika driver sistem lambat atau grafiknya error. PanVK tidak cocok untuk Adreno.";
+                return "Recommended for your Snapdragon: Turnip (Mesa) for Adreno 6xx/7xx if the system driver is slow or shows graphical glitches. PanVK does not suit Adreno.";
             case ADRENO_SYSTEM:
-                return "Disarankan: driver sistem. Turnip untuk Adreno ini masih eksperimental.";
+                return "Recommended: system driver. Turnip is still experimental for this Adreno.";
             case MALI_VALHALL:
-                return "Disarankan untuk GPU Mali-mu: PanVK (Mesa) jika driver sistem lambat atau grafiknya error. Turnip tidak cocok untuk Mali.";
+                return "Recommended for your Mali GPU: PanVK (Mesa) if the system driver is slow or shows graphical glitches. Turnip does not suit Mali.";
             case MALI_OLDER:
-                return "Disarankan: driver sistem. PanVK di Mali-G52/G72/G76 atau yang lebih lama masih eksperimental, dan Turnip tidak cocok untuk Mali.";
+                return "Recommended: system driver. PanVK on Mali-G52/G72/G76 or older is still experimental, and Turnip does not suit Mali.";
             case POWERVR:
-                return "Disarankan: driver sistem. Tidak ada driver alternatif yang stabil untuk PowerVR; Turnip dan PanVK tidak berfungsi di GPU ini.";
+                return "Recommended: system driver. There is no stable alternative driver for PowerVR; Turnip and PanVK do not work on this GPU.";
             case XCLIPSE:
-                return "Disarankan: driver sistem. Turnip dan PanVK tidak berfungsi di GPU Samsung Xclipse.";
+                return "Recommended: system driver. Turnip and PanVK do not work on Samsung Xclipse GPUs.";
             default:
-                return "Disarankan: driver sistem.";
+                return "Recommended: system driver.";
         }
     }
 

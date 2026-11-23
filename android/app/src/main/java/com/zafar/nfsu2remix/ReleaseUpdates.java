@@ -35,7 +35,7 @@ final class ReleaseUpdates {
         Thread worker = new Thread(() -> {
             Result result;
             try { result = fetch(app, force); }
-            catch (Exception error) { result = new Result(null, null, "Gagal menghubungi GitHub. Periksa koneksimu dan coba lagi nanti."); }
+            catch (Exception error) { result = new Result(null, null, "Could not reach GitHub. Check your connection and try again later."); }
             Result value = result;
             main.post(() -> callback.accept(value));
         }, "GitHubReleaseCheck");
@@ -69,8 +69,8 @@ final class ReleaseUpdates {
 
     /** Release notes of a version (GitHub release v{version}) as plain text, or null if unavailable. */
     static void releaseNotes(Context context, String version, Consumer<String> callback) {
-      if (!UPDATE_CHECK) { new Handler(Looper.getMainLooper()).post(() -> callback.accept(null)); return; }
-      Handler main = new Handler(Looper.getMainLooper());
+        if (!UPDATE_CHECK) { new Handler(Looper.getMainLooper()).post(() -> callback.accept(null)); return; }
+        Handler main = new Handler(Looper.getMainLooper());
         Thread worker = new Thread(() -> {
             String notes = null;
             try {
@@ -78,7 +78,7 @@ final class ReleaseUpdates {
                         "https://api.github.com/repos/codepdbh/nfsu2-recompiled/releases/tags/v" + Uri.encode(version)).openConnection();
                 connection.setConnectTimeout(6000); connection.setReadTimeout(6000);
                 connection.setRequestProperty("Accept", "application/vnd.github+json");
-                connection.setRequestProperty("User-Agent", "NFSU2-Android-Evolved/" + version);
+                connection.setRequestProperty("User-Agent", "NFSU2-Remix-Indonesia/" + version);
                 try {
                     if (connection.getResponseCode() == 200) {
                         ByteArrayOutputStream body = new ByteArrayOutputStream();
@@ -119,7 +119,7 @@ final class ReleaseUpdates {
         HttpsURLConnection connection = (HttpsURLConnection) new URL(API).openConnection();
         connection.setConnectTimeout(6000); connection.setReadTimeout(6000);
         connection.setRequestProperty("Accept", "application/vnd.github+json");
-        connection.setRequestProperty("User-Agent", "NFSU2-Android-Evolved/" + installed(context));
+        connection.setRequestProperty("User-Agent", "NFSU2-Remix-Indonesia/" + installed(context));
         connection.setRequestProperty("X-GitHub-Api-Version", "2026-03-10");
         try {
             int code = connection.getResponseCode();
@@ -129,12 +129,12 @@ final class ReleaseUpdates {
                         .putString("latest_tag", "").putString("latest_url", REPO + "releases").apply();
                 return new Result("", REPO + "releases", null);
             }
-            if (code != 200) throw new IOException("GitHub tidak tersedia");
+            if (code != 200) throw new IOException("GitHub is unavailable");
             ByteArrayOutputStream body = new ByteArrayOutputStream();
             try (InputStream input = connection.getInputStream()) {
                 byte[] buffer = new byte[8192]; int n;
                 while ((n = input.read(buffer)) != -1) {
-                    if (body.size() + n > 512 * 1024) throw new IOException("Respons terlalu besar");
+                    if (body.size() + n > 512 * 1024) throw new IOException("Response too large");
                     body.write(buffer, 0, n);
                 }
             }

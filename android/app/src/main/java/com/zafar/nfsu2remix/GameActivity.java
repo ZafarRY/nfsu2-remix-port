@@ -71,24 +71,24 @@ public final class GameActivity extends NativeActivity {
         }
     }
     private void showTiltOptions() {
-        if(tiltSensor==null) {Toast.makeText(this,"Perangkat ini tidak punya akselerometer",Toast.LENGTH_LONG).show();return;}
+        if(tiltSensor==null) {Toast.makeText(this,"This device has no accelerometer",Toast.LENGTH_LONG).show();return;}
         android.content.SharedPreferences options=getSharedPreferences("touch_layouts_v1",MODE_PRIVATE);
         LinearLayout form=new LinearLayout(this);form.setOrientation(LinearLayout.VERTICAL);form.setPadding(dp(24),dp(8),dp(24),dp(8));
-        CheckBox enabled=new CheckBox(this);enabled.setText("Belok dengan memiringkan HP");enabled.setChecked(tiltEnabled);form.addView(enabled);
-        CheckBox invert=new CheckBox(this);invert.setText("Balik arah");invert.setChecked(tiltInvert);form.addView(invert);
-        TextView label=new TextView(this);label.setText("Sensibilidad: "+tiltSensitivity+"×");form.addView(label);
+        CheckBox enabled=new CheckBox(this);enabled.setText("Steer by tilting the phone");enabled.setChecked(tiltEnabled);form.addView(enabled);
+        CheckBox invert=new CheckBox(this);invert.setText("Invert direction");invert.setChecked(tiltInvert);form.addView(invert);
+        TextView label=new TextView(this);label.setText("Sensitivity: "+tiltSensitivity+"×");form.addView(label);
         android.widget.SeekBar sensitivity=new android.widget.SeekBar(this);sensitivity.setMax(30);sensitivity.setProgress(Math.round(tiltSensitivity*10)-10);form.addView(sensitivity);
         sensitivity.setOnSeekBarChangeListener(new android.widget.SeekBar.OnSeekBarChangeListener() {
             public void onStartTrackingTouch(android.widget.SeekBar bar) {}public void onStopTrackingTouch(android.widget.SeekBar bar) {}
-            public void onProgressChanged(android.widget.SeekBar bar,int progress,boolean user) {label.setText("Sensibilidad: "+((progress+10)/10f)+"×");}
+            public void onProgressChanged(android.widget.SeekBar bar,int progress,boolean user) {label.setText("Sensitivity: "+((progress+10)/10f)+"×");}
         });
-        TextView help=new TextView(this);help.setText("Pegang HP pada posisi mainmu saat menerapkan. Kemiringan mengatur kiri/kanan; pedal tetap lewat sentuhan.");form.addView(help);
-        new AlertDialog.Builder(this).setTitle("Kemudi dengan kemiringan").setView(form)
-                .setPositiveButton("Terapkan & kalibrasi",(dialog,which)->{
+        TextView help=new TextView(this);help.setText("Hold the phone in your playing position when applying. Tilt controls left/right; the pedals stay on touch.");form.addView(help);
+        new AlertDialog.Builder(this).setTitle("Tilt steering").setView(form)
+                .setPositiveButton("Apply & calibrate",(dialog,which)->{
                     tiltEnabled=enabled.isChecked();tiltInvert=invert.isChecked();tiltSensitivity=(sensitivity.getProgress()+10)/10f;
                     options.edit().putBoolean("tilt.enabled",tiltEnabled).putBoolean("tilt.invert",tiltInvert).putFloat("tilt.sensitivity",tiltSensitivity).apply();
                     updateTiltSensor();
-                }).setNegativeButton("Batal",null).show();
+                }).setNegativeButton("Cancel",null).show();
     }
     private android.hardware.input.InputManager inputManager;
     private final android.hardware.input.InputManager.InputDeviceListener gamepadListener=new android.hardware.input.InputManager.InputDeviceListener() {
@@ -136,7 +136,7 @@ public final class GameActivity extends NativeActivity {
             touchControls.setGameMode(nativeDrivingControls());
             // Playing on with the pad after a touch revealed the controls hides them again.
             if(nativeGamepadUsed())touchControls.gamepadUsed();
-            if("server.dll".equals(nativeTakeNotice()))showNotice("Balapan LAN","server.dll milikmu bukan versi yang dipakai untuk menyiapkan aplikasi ini, jadi HP ini tidak bisa membuat balapan LAN. Kamu tetap bisa bergabung ke balapan yang dibuat pemain lain. Untuk membuatnya, salin server.dll dari instalasi PC yang sama dengan asal file eksekusi game ke folder nfsu2.");
+            if("server.dll".equals(nativeTakeNotice()))showNotice("LAN race","Your server.dll is not the version used to prepare this app, so this phone cannot host a LAN race. You can still join races hosted by other players. To host one, copy server.dll from the same PC installation the game executable came from into the nfsu2 folder.");
             touchControls.postDelayed(this,250);
         }
     };
@@ -165,31 +165,31 @@ public final class GameActivity extends NativeActivity {
                 .setSingleChoiceItems(option.labels,selected,(dialog,which)->{
                     GameOptions.set(this,GameOptions.FPS,option.values[which]);
                     nativeFrameLimit(Integer.parseInt(option.values[which]));dialog.dismiss();
-                }).setNegativeButton("Batal",null).show();
+                }).setNegativeButton("Cancel",null).show();
     }
     private int dp(int value) { return Math.round(value * getResources().getDisplayMetrics().density); }
     private void showTextInput() {
         EditText name = new EditText(this);
         name.setSingleLine(true);
-        name.setHint("Nama, email, atau kata sandi");
+        name.setHint("Name, email, or password");
         name.setFilters(new InputFilter[]{new InputFilter.LengthFilter(40)});
         name.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD |
                 InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
         name.setImeOptions(EditorInfo.IME_ACTION_DONE | EditorInfo.IME_FLAG_NO_EXTRACT_UI);
         CheckBox replace = new CheckBox(this);
-        replace.setText("Ganti nama saat ini");replace.setChecked(true);
+        replace.setText("Change current name");replace.setChecked(true);
         LinearLayout form = new LinearLayout(this);form.setOrientation(LinearLayout.VERTICAL);
         form.setPadding(dp(20), 0, dp(20), 0);form.addView(name);form.addView(replace);
         AlertDialog dialog = new AlertDialog.Builder(this)
-                .setTitle("Ketik di dalam game")
+                .setTitle("Type in the game")
                 .setView(form)
-                .setNegativeButton("Batal", null)
-                .setPositiveButton("Ketik", null)
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Type", null)
                 .create();
         dialog.setOnShowListener(ignored -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(button -> {
             String value = name.getText().toString();
             if (value.isEmpty() || !value.matches("[A-Za-z0-9 .,=/;_+?:!@#$%&*()-]{1,40}")) {
-                name.setError("Maksimal 40 karakter: huruf tanpa aksen, angka, dan . , - _ @ + ! # $ % & * ( ) = ? / ; :");
+                name.setError("Maximum 40 characters: letters without accents, digits, and . , - _ @ + ! # $ % & * ( ) = ? / ; :");
                 return;
             }
             nativeTypeText(value, replace.isChecked());
@@ -238,7 +238,7 @@ public final class GameActivity extends NativeActivity {
         status.setBackgroundColor(0xb0000000);
         status.setTextSize(18);
         status.setPadding(24, 16, 24, 16);
-        status.setText("NFSU2 Remix\nMemeriksa memori internal/nfsu2…");
+        status.setText("NFSU2 Remix\nChecking internal storage/nfsu2…");
         // NativeActivity gives its main window surface to Vulkan; use a separate
         // non-interactive popup surface for the diagnostic text.
         statusWindow = new PopupWindow(status, ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -253,7 +253,7 @@ public final class GameActivity extends NativeActivity {
     public void setStatus(String message) {
         runOnUiThread(() -> {
             if (statusHideTask != null) status.removeCallbacks(statusHideTask);
-            if (message.contains("Ejecutando entrada CRT")) {
+            if (message.contains("Running game CRT entry")) {
                 status.setText("NFSU2 Remix\n" + message);
                 statusHideTask = () -> {statusHidden=true;if(statusWindow.isShowing())statusWindow.dismiss();};
                 status.postDelayed(statusHideTask, 8000);
@@ -322,7 +322,7 @@ public final class GameActivity extends NativeActivity {
                     && checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
         if (!allowed && !requested) {
             requested = true;
-            Toast.makeText(this, "Izinkan akses file untuk membaca folder nfsu2 di memori internal", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Allow file access to read the nfsu2 folder in internal storage", Toast.LENGTH_LONG).show();
             if (Build.VERSION.SDK_INT >= 30) {
                 startActivity(new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
                         Uri.parse("package:" + getPackageName())));

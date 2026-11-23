@@ -24,25 +24,25 @@ final class GameOptions {
             TEXTURES = "textures", MINIMAP = "minimap", LANGUAGE = "language";
 
     static final Option[] ALL = {
-            new Option(RESOLUTION, "Resolusi internal", "75",
+            new Option(RESOLUTION, "Internal resolution", "75",
                     new String[] {"100", "75", "50", "720"},
-                    new String[] {"Asli · kualitas maksimal", "75% · seimbang", "50% · performa maksimal",
+                    new String[] {"Native · maximum quality", "75% · balanced", "50% · maximum performance",
                             "1280×720 · 16:9"}),
-            new Option(FPS, "Batas FPS", "120",
+            new Option(FPS, "FPS limit", "120",
                     new String[] {"30", "60", "90", "120", "0"},
-                    new String[] {"30 FPS · hemat baterai", "60 FPS", "90 FPS", "120 FPS", "Tanpa batas"}),
-            new Option(WIDESCREEN, "Layar lebar", "on",
+                    new String[] {"30 FPS · saves battery", "60 FPS", "90 FPS", "120 FPS", "Unlimited"}),
+            new Option(WIDESCREEN, "Widescreen", "on",
                     new String[] {"on", "off"},
-                    new String[] {"HUD dan kamera dikoreksi", "Asli 4:3 diregangkan"}),
-            new Option(MINIMAP, "Peta mini", "top",
+                    new String[] {"HUD and camera corrected", "Original 4:3 stretched"}),
+            new Option(MINIMAP, "Minimap", "top",
                     new String[] {"top", "bottom"},
-                    new String[] {"Kiri atas", "Kiri bawah (asli)"}),
-            new Option(LATENCY, "Sinkronisasi CPU/GPU", "2",
+                    new String[] {"Top left", "Bottom left (original)"}),
+            new Option(LATENCY, "CPU/GPU sync", "2",
                     new String[] {"2", "1"},
-                    new String[] {"Performa · CPU dan GPU paralel", "Latensi rendah · FPS lebih rendah"}),
-            new Option(TEXTURES, "Tekstur terkompresi", "auto",
+                    new String[] {"Performance · CPU and GPU in parallel", "Low latency · lower FPS"}),
+            new Option(TEXTURES, "Compressed textures", "auto",
                     new String[] {"auto", "cpu"},
-                    new String[] {"Otomatis · GPU jika didukung", "Konversi di CPU · kompatibilitas"}),
+                    new String[] {"Automatic · GPU if supported", "Convert on CPU · compatibility"}),
     };
 
     private static final String PREFS = "nfsu2_game";

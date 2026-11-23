@@ -287,7 +287,7 @@ uint32_t allocate(uint32_t bytes) {
 }
 void unsupported() {
     uint32_t index = (lastImport-importBase)/16;
-    throw GuestStop("HLE pendiente: " + imports.at(index).name + " desde " + hex(g_cur_func));
+    throw GuestStop("HLE pending: " + imports.at(index).name + " from " + hex(g_cur_func));
 }
 void getVersion() {
     uint32_t out = arg(0), bytes=read32(out);
@@ -912,7 +912,7 @@ std::string connectGuestRuntime(const char* executable) {
         shutdownD3D9Bridge();
 #endif
         original.load();
-        return std::string("Arranque guest detenido: ")+e.what();
+        return std::string("Guest boot stopped: ")+e.what();
     }
 }
 void requestGuestRuntimeStop() {stopRequested=true;}
