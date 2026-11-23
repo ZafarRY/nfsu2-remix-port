@@ -17,6 +17,10 @@ import android.view.MotionEvent;
 import android.view.View;
 import java.util.ArrayList;
 import java.util.HashMap;
+import android.graphics.DashPathEffect;
+import android.graphics.LinearGradient;
+import android.graphics.RadialGradient;
+import android.graphics.Shader;
 
 /**
  * On-screen controls drawn as icons, in the style of the MW port: round buttons, pedals and a steering
@@ -56,6 +60,16 @@ final class RacingControlsView extends View {
     private final SharedPreferences layouts;
     private float scale;
     private static final int ACCENT = Color.rgb(255, 154, 50);
+    private static final int NITRO = Color.rgb(61, 184, 255);
+    private static final int RING_A = 0xFF8FEBFF, RING_B = 0xFF4A86FF;
+    private static final int INK_DARK = 0xFF1A1208;
+    private static final float[] COS = new float[24], SIN = new float[24];
+    static {
+        for (int i = 0; i < 24; ++i) { COS[i] = (float) Math.cos(i * Math.PI / 12); SIN[i] = (float) Math.sin(i * Math.PI / 12); }
+    }
+    private final DashPathEffect dash = new DashPathEffect(new float[]{9, 7}, 0);
+    private final RectF box = new RectF();
+    private int glyphHot = ACCENT;
     private static final class Control {
         final RectF area;
         final String icon;
@@ -64,6 +78,8 @@ final class RacingControlsView extends View {
         String id;
         int held;
         float steering;
+        Shader body, bodyOn, ring;   // cached gradients
+        float key;
         Control(float x, float y, float w, float h, int shape, String icon, int scan, int color) {
             area = new RectF(x, y, x+w, y+h); original=new RectF(area); this.shape=shape; this.icon=icon; this.scan=scan; this.color=color;
         }
@@ -167,7 +183,7 @@ final class RacingControlsView extends View {
         super.onDraw(canvas);
         if(hiddenByGamepad&&!editing)return;
         canvas.save(); canvas.scale(scale,scale);
-        if(editing)canvas.drawColor(0x55000000);
+        if(editing)drawEditBackdrop(canvas);
         for(Control c:controls)drawControl(canvas,c);
         if(editing) {
             float w=getWidth()/scale;
@@ -180,39 +196,136 @@ final class RacingControlsView extends View {
         }
         canvas.restore();
     }
-    private void drawControl(Canvas canvas,Control c) {
-        boolean on=c.held>0||(c.shape==PEDAL&&c.scan==0xc8&&gasWanted()), picked=editing&&c==selected;
-        float cx=c.area.centerX(),cy=c.area.centerY(),r=Math.min(c.area.width(),c.area.height())/2;
-        int ink=on?ACCENT:0xE6FFFFFF;
-        line.setStrokeWidth(Math.max(1.6f,r*.06f));
-        if(c.shape==PEDAL) {
-            float corner=c.area.width()*.28f;
-            fill.setColor(on?0xD0FF9A32:(c.color&0x00FFFFFF)|0x99000000);
-            canvas.drawRoundRect(c.area,corner,corner,fill);
-            line.setColor(picked?0xFFFFCF69:on?0xFFFFD18A:0x99FFFFFF);
-            canvas.drawRoundRect(c.area,corner,corner,line);
-            // Grip ridges like a real pedal, then the direction it drives.
-            line.setColor(on?0xFFFFE2B8:0x66FFFFFF);
-            float span=c.area.width()*.28f;
-            for(int i=0;i<4;++i){float y=c.area.top+c.area.height()*(.52f+i*.11f);canvas.drawLine(cx-span,y,cx+span,y,line);}
-            line.setColor(ink);line.setStrokeWidth(Math.max(2.4f,c.area.width()*.06f));
-            chevron(canvas,cx,c.area.top+c.area.height()*.27f,c.area.width()*.22f,c.icon.equals("gas"));
-            return;
+        // ---- Neon-glass skin ---------------------------------------------------------------------------------
+
+    private static int mix(int a, int b, float t) {
+        return Color.rgb(Math.round(Color.red(a) + (Color.red(b) - Color.red(a)) * t),
+                Math.round(Color.green(a) + (Color.green(b) - Color.green(a)) * t),
+                Math.round(Color.blue(a) + (Color.blue(b) - Color.blue(a)) * t));
+    }
+    private static int withAlpha(int rgb, int a) { return (a << 24) | (rgb & 0x00FFFFFF); }
+    /** Colour of a pressed control: electric blue for NOS, the accent orange for everything else. */
+    private int hotColor(Control c) { return racing && c.scan == 0x38 ? NITRO : ACCENT; }
+
+    /** Gradients depend only on the control's rectangle, so they are built once and rebuilt only after a move or resize. */
+    private void buildShaders(Control c) {
+        float key = c.area.left * 3.1f + c.area.top * 5.3f + c.area.width() * 7.7f + c.area.height() * 11.1f;
+        if (c.ring != null && key == c.key) return;
+        c.key = key;
+        c.ring = new LinearGradient(c.area.left, c.area.top, c.area.right, c.area.bottom, RING_A, RING_B, Shader.TileMode.CLAMP);
+    }
+    private void glowRing(Canvas canvas, float cx, float cy, float r, int color) {
+        for (int i = 3; i >= 1; --i) {
+            line.setColor(withAlpha(color, 18 + (4 - i) * 14));
+            line.setStrokeWidth(i * 5f);
+            canvas.drawCircle(cx, cy, r, line);
         }
-        fill.setColor(0x55000000);canvas.drawCircle(cx,cy+r*.06f,r,fill);
-        fill.setColor(on?0xD0FF9A32:0x8C141C26);canvas.drawCircle(cx,cy,r,fill);
-        int ring=faceColor(c);
-        line.setColor(picked?0xFFFFCF69:on?0xFFFFD18A:ring!=0?ring:0x8CFFFFFF);
-        canvas.drawCircle(cx,cy,r-line.getStrokeWidth()/2,line);
-        if(c.shape==WHEEL) {
-            fill.setColor(on?ACCENT:0xCC3A4654);
-            float knob=r*.4f,kx=cx+c.steering*(r-knob);
-            canvas.drawCircle(kx,cy,knob,fill);line.setColor(0xB3FFFFFF);canvas.drawCircle(kx,cy,knob,line);
-            line.setColor(0x80FFFFFF);chevronSide(canvas,cx-r*.78f,cy,r*.12f,true);chevronSide(canvas,cx+r*.78f,cy,r*.12f,false);
-            return;
+    }
+    private void glowOutline(Canvas canvas, RectF a, float corner, int color) {
+        for (int i = 3; i >= 1; --i) {
+            line.setColor(withAlpha(color, 18 + (4 - i) * 14));
+            line.setStrokeWidth(i * 5f);
+            canvas.drawRoundRect(a, corner, corner, line);
         }
-        line.setColor(ink);fill.setColor(ink);line.setStrokeWidth(Math.max(2.2f,r*.1f));
-        drawIcon(canvas,c,cx,cy,r,on);
+    }
+    private void glowCircle(Canvas canvas, float cx, float cy, float r, int color) {
+        for (int i = 3; i >= 1; --i) {
+            fill.setColor(withAlpha(color, 22 + (4 - i) * 10));
+            canvas.drawCircle(cx, cy, r + r * .12f * i, fill);
+        }
+    }
+    private void glowRect(Canvas canvas, RectF a, float corner, int color) {
+        for (int i = 3; i >= 1; --i) {
+            float g = i * 4;
+            box.set(a.left - g, a.top - g, a.right + g, a.bottom + g);
+            fill.setColor(withAlpha(color, 22 + (4 - i) * 10));
+            canvas.drawRoundRect(box, corner + g, corner + g, fill);
+        }
+    }
+    private void selectionOutline(Canvas canvas, RectF a, float corner) {
+        box.set(a.left - 5, a.top - 5, a.right + 5, a.bottom + 5);
+        line.setPathEffect(dash); line.setColor(0xFFFFCF69); line.setStrokeWidth(2f);
+        canvas.drawRoundRect(box, corner + 5, corner + 5, line);
+        line.setPathEffect(null);
+    }
+    private void drawEditBackdrop(Canvas canvas) {
+        canvas.drawColor(0x66060B12);
+        float w = getWidth() / scale, h = getHeight() / scale;
+        fill.setColor(0x33FFFFFF);
+        for (float x = 20; x < w; x += 40) for (float y = 20; y < h; y += 40) canvas.drawCircle(x, y, 1.4f, fill);
+    }
+
+    private void drawControl(Canvas canvas, Control c) {
+        boolean on = c.held > 0 || (c.shape == PEDAL && c.scan == 0xc8 && gasWanted());
+        boolean picked = editing && c == selected;
+        buildShaders(c);
+        float cx = c.area.centerX(), cy = c.area.centerY(), r = Math.min(c.area.width(), c.area.height()) / 2;
+        int hot = hotColor(c);
+        canvas.save();
+        if (on) canvas.scale(.95f, .95f, cx, cy);   // pressed: sink slightly
+        if (c.shape == PEDAL) drawPedal(canvas, c, on, picked, hot);
+        else if (c.shape == WHEEL) drawStick(canvas, c, cx, cy, r, on, picked, hot);
+        else drawRound(canvas, c, cx, cy, r, on, picked, hot);
+        canvas.restore();
+    }
+    private void drawRound(Canvas canvas, Control c, float cx, float cy, float r, boolean on, boolean picked, int hot) {
+        float stroke = Math.max(2f, r * .07f), rr = r - stroke / 2;
+        if (on) glowRing(canvas, cx, cy, rr, hot);
+        fill.setColor(on ? withAlpha(hot, 0x47) : 0x2E000000);   // barely-there tint keeps icons readable
+        canvas.drawCircle(cx, cy, r, fill);
+        int face = faceColor(c);
+        line.setStrokeWidth(stroke);
+        if (on) line.setColor(hot);
+        else if (face != 0) line.setColor(face);
+        else line.setShader(c.ring);
+        canvas.drawCircle(cx, cy, rr, line);
+        line.setShader(null);
+        int ink = on ? hot : 0xF2FFFFFF;
+        line.setColor(ink); fill.setColor(ink); line.setStrokeWidth(Math.max(2.2f, r * .1f));
+        glyphHot = hot;
+        drawIcon(canvas, c, cx, cy, r, on);
+        if (picked) selectionOutline(canvas, c.area, r);
+    }
+    private void drawPedal(Canvas canvas, Control c, boolean on, boolean picked, int hot) {
+        RectF a = c.area;
+        float w = a.width(), h = a.height(), corner = w * .3f, cx = a.centerX(), stroke = Math.max(2f, w * .045f);
+        if (on) glowOutline(canvas, a, corner, hot);
+        fill.setColor(on ? withAlpha(hot, 0x47) : withAlpha(c.color, 0x40));   // faint green / red tint
+        canvas.drawRoundRect(a, corner, corner, fill);
+        box.set(a.left + stroke / 2, a.top + stroke / 2, a.right - stroke / 2, a.bottom - stroke / 2);
+        line.setStrokeWidth(stroke);
+        if (on) line.setColor(hot); else line.setShader(c.ring);
+        canvas.drawRoundRect(box, corner, corner, line);
+        line.setShader(null);
+        line.setStrokeWidth(Math.max(1.4f, w * .03f));                                   // grip ridges
+        line.setColor(on ? withAlpha(hot, 0xAA) : 0x40FFFFFF);
+        float span = w * .26f;
+        for (int i = 0; i < 4; ++i) { float y = a.top + h * (.55f + i * .1f); canvas.drawLine(cx - span, y, cx + span, y, line); }
+        line.setColor(on ? hot : 0xF2FFFFFF); line.setStrokeWidth(Math.max(2.4f, w * .06f));
+        chevron(canvas, cx, a.top + h * .27f, w * .22f, c.icon.equals("gas"));
+        if (picked) selectionOutline(canvas, a, corner);
+    }
+    private void drawStick(Canvas canvas, Control c, float cx, float cy, float r, boolean on, boolean picked, int hot) {
+        float stroke = Math.max(2f, r * .04f);
+        fill.setColor(0x2E000000); canvas.drawCircle(cx, cy, r, fill);
+        line.setStrokeWidth(stroke);
+        line.setShader(c.ring); canvas.drawCircle(cx, cy, r - stroke / 2, line); line.setShader(null);
+        float s = c.steering;                                                            // ticks light up toward the steering side
+        line.setStrokeWidth(Math.max(1.6f, r * .03f));
+        for (int i = 0; i < 24; ++i) {
+            boolean lit = s != 0 && COS[i] * Math.signum(s) > .15f && Math.abs(COS[i]) <= Math.abs(s) + .2f;
+            line.setColor(lit ? hot : 0x4DFFFFFF);
+            canvas.drawLine(cx + COS[i] * r * .76f, cy + SIN[i] * r * .76f, cx + COS[i] * r * .9f, cy + SIN[i] * r * .9f, line);
+        }
+        float knob = r * .4f, kx = cx + s * (r - knob);
+        if (on) glowRing(canvas, kx, cy, knob, hot);
+        fill.setColor(on ? withAlpha(hot, 0x47) : 0x2EFFFFFF);
+        canvas.drawCircle(kx, cy, knob, fill);
+        line.setStrokeWidth(Math.max(2f, r * .05f)); line.setColor(on ? hot : 0xF2FFFFFF);
+        canvas.drawCircle(kx, cy, knob, line);
+        line.setStrokeWidth(Math.max(1.6f, r * .04f)); line.setColor(0x80FFFFFF);
+        chevronSide(canvas, cx - r * .55f, cy, r * .09f, true); chevronSide(canvas, cx + r * .55f, cy, r * .09f, false);
+        if (picked) selectionOutline(canvas, c.area, r);
     }
     private int faceColor(Control c) {
         if(!racing||style.equals("classic")||c.icon.length()!=1)return 0;
@@ -291,13 +404,16 @@ final class RacingControlsView extends View {
     }
     private void glyph(Canvas canvas,String value,float x,float y,float size,boolean on) {glyph(canvas,value,x,y,size,on,0);}
     private void glyph(Canvas canvas,String value,float x,float y,float size,boolean on,int color) {
-        text.setTextSize(size);text.setColor(color!=0?color:on?ACCENT:0xF0FFFFFF);
+                text.setTextSize(size);text.setColor(color!=0?color:on?glyphHot:0xF0FFFFFF);
         canvas.drawText(value,x,y-(text.ascent()+text.descent())/2,text);
     }
-    private void drawToolbarButton(Canvas canvas,RectF area,String label) {
-        fill.setColor(0xE014202C);canvas.drawRoundRect(area,12,12,fill);
-        text.setColor(ACCENT);text.setTextSize(label.length()>2?12:24);
-        canvas.drawText(label,area.centerX(),area.centerY()-(text.ascent()+text.descent())/2,text);
+        private void drawToolbarButton(Canvas canvas, RectF area, String label) {
+        float round = area.height() / 2;
+        fill.setColor(0x80000000); canvas.drawRoundRect(area, round, round, fill);
+        line.setShader(null); line.setStrokeWidth(2f); line.setColor(ACCENT);
+        canvas.drawRoundRect(area, round, round, line);
+        text.setColor(ACCENT); text.setTextSize(label.length() > 2 ? 12 : 24);
+        canvas.drawText(label, area.centerX(), area.centerY() - (text.ascent() + text.descent()) / 2, text);
     }
 
     // ---- Editor ------------------------------------------------------------------------------------------
