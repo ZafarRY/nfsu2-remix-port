@@ -63,8 +63,10 @@ public final class LauncherActivity extends Activity {
                 View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
         setContentView(buildScreen());
         checkUpdates(false);
-        String updated = ReleaseUpdates.pendingWhatsNew(this);
-        if (updated != null) showWhatsNew(updated);
+        if (ReleaseUpdates.UPDATE_CHECK) {
+            String updated = ReleaseUpdates.pendingWhatsNew(this);
+            if (updated != null) showWhatsNew(updated);
+        }
     }
 
     /** First launch after an update: the installed version's release notes from GitHub. */

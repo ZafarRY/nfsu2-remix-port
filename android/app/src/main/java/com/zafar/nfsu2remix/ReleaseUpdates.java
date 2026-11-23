@@ -69,7 +69,8 @@ final class ReleaseUpdates {
 
     /** Release notes of a version (GitHub release v{version}) as plain text, or null if unavailable. */
     static void releaseNotes(Context context, String version, Consumer<String> callback) {
-        Handler main = new Handler(Looper.getMainLooper());
+      if (!UPDATE_CHECK) { new Handler(Looper.getMainLooper()).post(() -> callback.accept(null)); return; }
+      Handler main = new Handler(Looper.getMainLooper());
         Thread worker = new Thread(() -> {
             String notes = null;
             try {

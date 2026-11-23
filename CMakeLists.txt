@@ -43,7 +43,6 @@ add_executable(NFSU2-Recompiled
   src/host/profiler.c
   src/runtime/nfs_runtime.c
   src/runtime/overrides.c src/runtime/widescreen.c
-  src/runtime/widescreen.c
   src/runtime/d3d9_trace.c
   src/runtime/dinput_trace.c
   src/runtime/native_range.c

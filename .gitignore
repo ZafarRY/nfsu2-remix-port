@@ -39,3 +39,5 @@ src/recomp/gen_server/
 NFSU2-diagnostico-*.zip
 
 .github/workflows/build-native.yml
+build_full.gradle
+rename_package.sh
