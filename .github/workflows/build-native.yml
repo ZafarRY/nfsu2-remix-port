@@ -1,0 +1,180 @@
+name: Build Native (.so)
+
+on:
+  workflow_dispatch:
+    inputs:
+      exe_tag:
+        description: "Tag release yang berisi SPEED2.EXE"
+        required: true
+        default: "game-exe"
+      so_tag:
+        description: "Tag release tujuan file .so"
+        required: true
+        default: "so-zafar"
+      publish:
+        description: "Upload hasil .so ke release"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+env:
+  EXPECTED_SHA256: f9dd86c054878ce6276beb07c1fd61874f7a1e4bf1f241b084c65b73e24168a7
+  CCACHE_DIR: ${{ github.workspace }}/.ccache
+  CCACHE_MAXSIZE: 4G
+
+jobs:
+  native:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tambah swap 8 GB
+        run: |
+          sudo swapoff -a || true
+          sudo fallocate -l 8G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+          free -h
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y glslang-tools spirv-tools ccache ninja-build
+          pip install capstone pefile unicorn keystone-engine
+
+      - name: Android SDK / NDK / CMake
+        run: |
+          SDKM=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | head -n1)
+          yes | "$SDKM" --licenses > /dev/null || true
+          "$SDKM" "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018" "cmake;3.22.1"
+
+      - name: Ambil SPEED2.EXE dari release dan cek hash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p work
+          gh release download "${{ inputs.exe_tag }}" --repo "${{ github.repository }}" --pattern SPEED2.EXE --dir work
+          echo "$EXPECTED_SHA256  work/SPEED2.EXE" | sha256sum -c -
+
+      - name: Cache kode hasil lift
+        id: gen_cache
+        uses: actions/cache@v4
+        with:
+          path: src/recomp/gen
+          key: gen-${{ env.EXPECTED_SHA256 }}-${{ hashFiles('patches/pcrecomp/*.patch', 'scripts/run_lift.py', 'scripts/normalize_exe.py') }}
+
+      - name: pcrecomp (commit 35548b8 + patch proyek)
+        run: |
+          git clone https://github.com/sp00nznet/pcrecomp.git ../pcrecomp
+          cd ../pcrecomp
+          git checkout 35548b8
+          git config user.email "ci@example.com"
+          git config user.name "ci"
+          git am "$GITHUB_WORKSPACE"/patches/pcrecomp/*.patch
+
+      - name: Lift SPEED2.EXE menjadi C
+        if: steps.gen_cache.outputs.cache-hit != 'true'
+        run: |
+          set -e
+          python scripts/normalize_exe.py work/SPEED2.EXE work/SPEED2.analysis.exe
+          python ../pcrecomp/tools/cpp/vtable_scan.py work/SPEED2.analysis.exe --seeds work/vtable_seeds.json
+          python ../pcrecomp/tools/cpp/rtti.py work/SPEED2.analysis.exe --seeds work/rtti_seeds.json
+          python - <<'PY'
+          import json
+          def lst(x):
+              if isinstance(x, dict):
+                  for k in ("seeds", "addresses", "functions"):
+                      if k in x:
+                          return x[k]
+                  return []
+              return x
+          a = lst(json.load(open("work/vtable_seeds.json")))
+          b = lst(json.load(open("work/rtti_seeds.json")))
+          print("seeds vtable:", len(a), "rtti:", len(b))
+          json.dump(a + b, open("work/seeds_all.json", "w"))
+          PY
+          python scripts/run_lift.py catalog work/SPEED2.analysis.exe work/seeds_all.json work/catalog.json
+          python scripts/run_lift.py lift work/SPEED2.analysis.exe work/catalog.json src/recomp/gen
+          ls src/recomp/gen | head
+
+      - name: DXVK native (tag native-1.9.2b)
+        run: |
+          git clone --branch native-1.9.2b https://github.com/Joshua-Ashton/dxvk-native.git ../reference/dxvk-native
+          git -C ../reference/dxvk-native checkout c8dc91fabd00cac11d697ccf07426e798393cd40
+          git -C ../reference/dxvk-native submodule update --init --recursive
+          python ports/dxvk_android/prepare.py ../reference/dxvk-native build/dxvk-source
+          python3 ports/dxvk_android/shaders.py build/dxvk-source
+
+      - name: libadrenotools (versi yang sama dengan repo resmi)
+        run: |
+          if [ ! -f third_party/libadrenotools/CMakeLists.txt ]; then
+            git clone --depth 1 https://github.com/codepdbh/nfsu2-recompiled.git ../upstream
+            git -C ../upstream submodule update --init --recursive -- third_party
+            mkdir -p third_party
+            cp -r ../upstream/third_party/. third_party/
+          fi
+          ls third_party
+
+      - name: Aktifkan build native di build.gradle (hanya di runner)
+        run: |
+          python - <<'PY'
+          p = "android/app/build.gradle"
+          s = open(p).read()
+          a = "        ndk { abiFilters(project.findProperty('nfsAbi') ?: 'arm64-v8a') }"
+          b = "    packaging { jniLibs { useLegacyPackaging true } }"
+          assert a in s and b in s
+          s = s.replace(a, a + "\n        externalNativeBuild { cmake { arguments '-DCMAKE_C_COMPILER_LAUNCHER=ccache', '-DCMAKE_CXX_COMPILER_LAUNCHER=ccache' } }")
+          s = s.replace(b, "    ndkVersion '27.2.12479018'\n    externalNativeBuild { cmake { path 'src/main/cpp/CMakeLists.txt'\n        version '3.22.1' } }\n" + b)
+          open(p, "w").write(s)
+          PY
+
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: .ccache
+          key: ccache-${{ github.sha }}
+          restore-keys: ccache-
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build native + APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Ambil .so dari APK
+        run: |
+          mkdir -p libs
+          APK=$(ls android/app/build/outputs/apk/debug/*.apk | head -n1)
+          unzip -j "$APK" 'lib/arm64-v8a/*.so' -d libs
+          ls -l libs
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: so-files
+          path: libs/*.so
+
+      - name: Upload .so ke release
+        if: ${{ inputs.publish }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete "${{ inputs.so_tag }}" --cleanup-tag -y --repo "${{ github.repository }}" || true
+          gh release create "${{ inputs.so_tag }}" libs/*.so --repo "${{ github.repository }}" \
+            --title "${{ inputs.so_tag }}" \
+            --notes ".so hasil build native, package com.zafar.nfsu2remix" \
+            --target "${{ github.sha }}"
