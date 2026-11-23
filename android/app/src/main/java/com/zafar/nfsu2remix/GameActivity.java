@@ -253,10 +253,10 @@ public final class GameActivity extends NativeActivity {
     public void setStatus(String message) {
         runOnUiThread(() -> {
             if (statusHideTask != null) status.removeCallbacks(statusHideTask);
-            if (message.contains("Running game CRT entry")) {
+            if (message.contains("CRT")) {
                 status.setText("NFSU2 Remix\n" + message);
                 statusHideTask = () -> {statusHidden=true;if(statusWindow.isShowing())statusWindow.dismiss();};
-                status.postDelayed(statusHideTask, 8000);
+                status.postDelayed(statusHideTask, 5000);
             } else {
                 statusHidden=false;
                 status.setText("NFSU2 Remix\n" + message);
