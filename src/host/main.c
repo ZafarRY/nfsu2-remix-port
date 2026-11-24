@@ -193,6 +193,7 @@ int main(int argc, char **argv) {
     SetCurrentDirectoryA(g_nfs_game_root);
     NFS_LOG(BOOT, "GAME_ROOT = %s", g_nfs_game_root);
     nfs_widescreen_init(g_nfs_game_root);
+    nfs_soundtuner_init(g_nfs_game_root);
     NFS_LOG(BOOT, "widescreen: %d HUD offsets from scripts/NFSUnderground2.WidescreenFix.dat", nfs_widescreen_hud_entries());
 
     /* 3. Machine, image, imports */

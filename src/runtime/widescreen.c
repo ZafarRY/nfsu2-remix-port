@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include "nfs_soundtuner.h"
 
 typedef struct { float pos_x, pos_y, offset_x, offset_y; } hud_entry;
 static hud_entry s_hud[256];
@@ -109,6 +110,10 @@ void nfs_widescreen_init(const char* game_root) {
     if (!s_hud_count && getenv("NFSU2_WIDESCREEN_DAT")) load_dat(getenv("NFSU2_WIDESCREEN_DAT"));
     s_enabled = 1;
 }
+
+void recomp_hook(uint32_t va) {
+    int site = 0;
+    if (nfs_soundtuner_hook(va)) return;   /* CarSoundTuner */
 
 void nfs_widescreen_set_resolution(unsigned width, unsigned height) {
     float hud_scale_x;

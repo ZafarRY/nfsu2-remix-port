@@ -42,6 +42,7 @@ extern "C" {
 #include "recomp_types.h"
 #include "pe_format.h"
 #include "nfs_runtime.h"
+#include "nfs_soundtuner.h"
 
 uint32_t g_eax, g_ecx, g_edx, g_esp, g_ebx, g_esi, g_edi, g_ebp;
 #ifndef RECOMP_X87_WINDOW
@@ -873,6 +874,9 @@ std::string connectGuestRuntime(const char* executable) {
             nfs_widescreen_init(hostGameRoot.c_str());
             NFS_RUNTIME_LOG(ANDROID_LOG_INFO,"NFSU2","Widescreen: %d HUD offsets from scripts/NFSUnderground2.WidescreenFix.dat",nfs_widescreen_hud_entries());
         }else NFS_RUNTIME_LOG(ANDROID_LOG_INFO,"NFSU2","Widescreen disabled: original 4:3 geometry");
+        nfs_soundtuner_init(hostGameRoot.c_str());
+        nfs_soundtuner_set_allocator(allocate);
+        nfs_soundtuner_apply();
         if(renderWidth.load()&&renderHeight.load())configureAndroidResolutionModes();
         memory->commit(stackBase,stackSize); memory->commit(tib,0x1000);
         State fresh; fresh.esp=stackBase+stackSize-64; fresh.fs=tib; fresh.load();

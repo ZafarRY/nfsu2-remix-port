@@ -69,12 +69,14 @@ jobs:
           gh release download "${{ inputs.exe_tag }}" --repo "${{ github.repository }}" --pattern SPEED2.EXE --dir work
           echo "$EXPECTED_SHA256  work/SPEED2.EXE" | sha256sum -c -
 
+      # config/*.txt (hooks.txt, exclude.txt, overrides.txt) ikut ke key: run_lift.py
+      # membacanya saat lift, jadi mengubah hook harus memicu lift ulang.
       - name: Cache kode hasil lift
         id: gen_cache
         uses: actions/cache@v4
         with:
           path: src/recomp/gen
-          key: gen-${{ env.EXPECTED_SHA256 }}-${{ hashFiles('patches/pcrecomp/*.patch', 'scripts/run_lift.py', 'scripts/normalize_exe.py') }}
+          key: gen-${{ env.EXPECTED_SHA256 }}-${{ hashFiles('patches/pcrecomp/*.patch', 'scripts/run_lift.py', 'scripts/normalize_exe.py', 'config/*.txt') }}
 
       - name: pcrecomp (commit 35548b8 + patch proyek)
         run: |
@@ -109,6 +111,13 @@ jobs:
           python scripts/run_lift.py catalog work/SPEED2.analysis.exe work/seeds_all.json work/catalog.json
           python scripts/run_lift.py lift work/SPEED2.analysis.exe work/catalog.json src/recomp/gen
           ls src/recomp/gen | head
+
+      # Berjalan baik saat cache hit maupun miss: gagal jika hook CarSoundTuner
+      # (config/hooks.txt, 0x004593C7) tidak ada di kode hasil lift.
+      - name: Pastikan hook CarSoundTuner ter-lift
+        run: |
+          grep -rqF "RECOMP_HOOK(0x004593C7u)" src/recomp/gen \
+            || { echo "::error::hook 0x004593C7 tidak ada di kode hasil lift"; exit 1; }
 
       - name: DXVK native (tag native-1.9.2b)
         run: |
