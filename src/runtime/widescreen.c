@@ -111,10 +111,6 @@ void nfs_widescreen_init(const char* game_root) {
     s_enabled = 1;
 }
 
-void recomp_hook(uint32_t va) {
-    int site = 0;
-    if (nfs_soundtuner_hook(va)) return;   /* CarSoundTuner */
-
 void nfs_widescreen_set_resolution(unsigned width, unsigned height) {
     float hud_scale_x;
     if (!s_enabled || !width || !height) return;
@@ -160,6 +156,7 @@ static void set_esp_float(uint32_t offset, float value) { wrf(g_esp + offset, va
 
 void recomp_hook(uint32_t va) {
     int site = 0;
+    if (nfs_soundtuner_hook(va)) return;
     while (site < SITE_COUNT && k_sites[site] != va) ++site;
     if (!s_enabled && site != FRAME_TIME) return;
     { static int trace = -1; static uint32_t seen[SITE_COUNT]; static int count;
