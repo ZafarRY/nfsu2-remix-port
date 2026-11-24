@@ -10,14 +10,23 @@ on:
         default: build
       data_tag:
         description: "[build] Tag release privat berisi SPEED2.EXE (+ catalog.json bila ada)"
-        default: "game-data"
+        default: "game-exe"
       release_tag:
         description: "[prebuilt] Tag release yang berisi 6 file .so"
         default: "so-zafar"
+      bump:
+        description: "Kenaikan versi otomatis"
+        type: choice
+        options: [patch, minor, major]
+        default: patch
       version_tag:
-        description: "Tag release baru untuk APK (contoh: v1.0.1). Kosongkan = tidak upload ke Release"
+        description: "Isi manual (contoh v1.2.0) untuk menimpa versi otomatis. Kosongkan = otomatis"
         required: false
         default: ""
+      publish:
+        description: "Upload APK ke Release"
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -28,6 +37,8 @@ jobs:
     timeout-minutes: 360
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-java@v4
         with:
@@ -41,6 +52,51 @@ jobs:
           "$SDKM" "platforms;android-35" "build-tools;35.0.0"
 
       - uses: gradle/actions/setup-gradle@v4
+
+      # ------------------------------------------------------------------
+      # Versi otomatis
+      # ------------------------------------------------------------------
+      - name: Hitung versi otomatis
+        id: ver
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          LAST=$(gh release list --repo "${{ github.repository }}" --limit 200 --json tagName -q '.[].tagName' \
+            | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n1 || true)
+          if [ -n "${{ inputs.version_tag }}" ]; then
+            TAG="${{ inputs.version_tag }}"
+          elif [ -z "$LAST" ]; then
+            TAG="v1.0.0"
+          else
+            IFS=. read -r MA MI PA <<< "${LAST#v}"
+            case "${{ inputs.bump }}" in
+              major) MA=$((MA+1)); MI=0; PA=0 ;;
+              minor) MI=$((MI+1)); PA=0 ;;
+              *)     PA=$((PA+1)) ;;
+            esac
+            TAG="v$MA.$MI.$PA"
+          fi
+          NAME="${TAG#v}"
+          CODE=$((1000 + GITHUB_RUN_NUMBER))
+          echo "Versi terakhir: ${LAST:-tidak ada} -> $TAG (versionCode $CODE)"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "last=$LAST" >> "$GITHUB_OUTPUT"
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "code=$CODE" >> "$GITHUB_OUTPUT"
+
+      - name: Terapkan versi ke build.gradle (hanya di runner)
+        run: |
+          python3 - <<'PY'
+          import re
+          p = "android/app/build.gradle"
+          s = open(p).read()
+          s, n1 = re.subn(r"versionCode\s+\d+", "versionCode ${{ steps.ver.outputs.code }}", s, count=1)
+          s, n2 = re.subn(r"versionName\s+'[^']*'", "versionName '${{ steps.ver.outputs.name }}'", s, count=1)
+          assert n1 == 1 and n2 == 1, "versionCode/versionName tidak ditemukan"
+          open(p, "w").write(s)
+          PY
+          grep -n "versionCode\|versionName" android/app/build.gradle
 
       # ------------------------------------------------------------------
       # MODE build: lift ulang + compile libnfsu2_android.so (dan 5 .so lain)
@@ -180,19 +236,44 @@ jobs:
           path: android/app/build/outputs/apk/debug/*.apk
 
       - name: Upload APK ke Release (hanya jika build berhasil)
-        if: ${{ inputs.version_tag != '' }}
+        if: ${{ inputs.publish }}
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ inputs.version_tag }}
+          TAG: ${{ steps.ver.outputs.tag }}
+          LAST: ${{ steps.ver.outputs.last }}
         run: |
           APK=$(ls android/app/build/outputs/apk/debug/*.apk | head -n1)
           cp "$APK" nfsu2-remix.apk
+          SHA=$(sha256sum nfsu2-remix.apk | cut -d' ' -f1)
+          if [ -n "$LAST" ] && git rev-parse -q --verify "refs/tags/$LAST" > /dev/null; then
+            RANGE="$LAST..HEAD"
+          else
+            RANGE="HEAD"
+          fi
+          {
+            echo "## NFSU2 Remix $TAG"
+            echo
+            echo "### Perubahan"
+            git log "$RANGE" --no-merges --pretty=format:'- %s (%h)' \
+              | awk '!seen[substr($0,1,index($0," (")-1)]++'
+            echo
+            echo
+            if [ -n "$LAST" ]; then
+              echo "Perubahan lengkap: https://github.com/${{ github.repository }}/compare/$LAST...$TAG"
+              echo
+            fi
+            echo "### APK"
+            echo "- File: \`nfsu2-remix.apk\`"
+            echo "- SHA-256: \`$SHA\`"
+          } > notes.md
+          cat notes.md
           if gh release view "$TAG" --repo "${{ github.repository }}" > /dev/null 2>&1; then
             gh release upload "$TAG" nfsu2-remix.apk --clobber --repo "${{ github.repository }}"
+            gh release edit "$TAG" --notes-file notes.md --repo "${{ github.repository }}"
           else
             gh release create "$TAG" nfsu2-remix.apk \
               --repo "${{ github.repository }}" \
               --title "NFSU2 Remix $TAG" \
-              --notes "CarSoundTuner (scripts/CarSoundData) + perbaikan lain." \
+              --notes-file notes.md \
               --target "${{ github.sha }}"
           fi
