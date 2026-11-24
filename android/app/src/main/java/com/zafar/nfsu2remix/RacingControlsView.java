@@ -118,6 +118,15 @@ final class RacingControlsView extends View {
         float dy=c.area.top<4?4-c.area.top:c.area.bottom>h-4?h-4-c.area.bottom:0;
         c.area.offset(dx,dy);
     }
+    /** True jika mod ExtraOptions terpasang (nfsu2/scripts/NFSU2ExtraOptions.*). */
+    private static boolean hasExtraOptions() {
+        java.io.File dir = new java.io.File(android.os.Environment.getExternalStorageDirectory(), "nfsu2/scripts");
+        String[] names = dir.list();
+        if (names == null) return false;
+        for (String name : names)
+            if (name.toLowerCase(java.util.Locale.ROOT).startsWith("nfsu2extraoptions")) return true;
+        return false;
+    }
     @Override protected void onSizeChanged(int w,int h,int oldw,int oldh) { layoutControls(); }
     void setGameMode(boolean driving) {
         if(editing||lastGameMode==driving)return;
@@ -180,6 +189,7 @@ final class RacingControlsView extends View {
             add(w-96,bottom-110,76,"accept",0x1c);
             add(w-176,bottom-62,56,"back",1);
             add(w/2-23,bottom-46,46,"keyboard",TEXT);
+            if(hasExtraOptions()) add(w/2+40,bottom-46,46,"F5",0x3f);
         }
         invalidate();
     }
