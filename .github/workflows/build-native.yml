@@ -10,7 +10,7 @@ on:
       so_tag:
         description: "Tag release tujuan file .so"
         required: true
-        default: "so-zafar"
+        default: "game-so"
       publish:
         description: "Upload hasil .so ke release"
         type: boolean
@@ -29,7 +29,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 360
     steps:
-      - uses: actions/checkout@v4
+      - name: Ambil source dari repo publik
+        uses: actions/checkout@v4
+        with:
+          repository: ZafarRY/remix
+          ref: main
+
+      - name: Pastikan repo PRIVAT (exe dan hasil lift tidak boleh di repo publik)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PRIV=$(gh repo view "${{ github.repository }}" --json isPrivate -q .isPrivate)
+          if [ "$PRIV" != "true" ]; then
+            echo "::error::Repo ini publik. Jadikan PRIVAT dulu."
+            exit 1
+          fi
 
       - name: Tambah swap 8 GB
         run: |
@@ -165,11 +179,13 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
 
-      - name: Ambil .so dari APK
+      - name: Ambil .so dari APK (buang info debug saja agar ukuran kecil)
         run: |
           mkdir -p libs
           APK=$(ls android/app/build/outputs/apk/debug/*.apk | head -n1)
           unzip -j "$APK" 'lib/arm64-v8a/*.so' -d libs
+          STRIP="$ANDROID_HOME/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip"
+          for f in libs/*.so; do "$STRIP" --strip-debug "$f"; done
           ls -l libs
 
       - uses: actions/upload-artifact@v4
@@ -182,8 +198,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          SRC=$(git rev-parse --short HEAD)
           gh release delete "${{ inputs.so_tag }}" --cleanup-tag -y --repo "${{ github.repository }}" || true
           gh release create "${{ inputs.so_tag }}" libs/*.so --repo "${{ github.repository }}" \
-            --title "${{ inputs.so_tag }}" \
-            --notes ".so hasil build native, package com.zafar.nfsu2remix" \
+            --title "Asset SO" \
+            --notes ".so hasil build native, package com.zafar.nfsu2remix. Source: ZafarRY/remix@$SRC" \
             --target "${{ github.sha }}"

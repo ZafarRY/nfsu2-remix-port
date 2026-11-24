@@ -1,43 +1,64 @@
-# --- Never commit game material or anything derived from SPEED2.EXE ---
-# Generated C lifted from the binary (a derivative of proprietary code)
+# =====================================================================
+# Repo PUBLIK: jangan pernah commit materi game atau turunannya.
+# Semua yang berbau EA (EXE, .so hasil lift, APK) hanya di repo privat.
+# =====================================================================
+
+# --- Kode C hasil lift dari SPEED2.EXE (turunan kode proprietary) ---
 src/recomp/gen/
-# Build output
+src/recomp/gen_server/
+
+# --- Hasil build ---
 build/
-# Run logs and crash dumps (contain guest memory/addresses)
-logs/*
-!logs/.gitkeep
-# Any copy of game binaries/assets that might land here by accident
-*.EXE
-*.exe
-*.dll
-*.DLL
-*.BIN
-*.BUN
-*.bin
-*.bun
-*.big
-*.BIG
-*.vp6
-*.mad
-*.asf
-*.iso
-# Analysis artefacts that embed binary contents
+build-android/
+.cxx/
+.gradle/
+.ccache/
+libs/
+jniLibs/
+*.so
+*.apk
+*.aab
+*.dex
+
+# --- Biner / aset game yang mungkin tidak sengaja masuk (tanpa peduli huruf besar-kecil) ---
+*.[eE][xX][eE]
+*.[dD][lL][lL]
+*.[bB][iI][nN]
+*.[bB][uU][nN]
+*.[bB][iI][gG]
+*.[lL][zZ][cC]
+*.[aA][bB][kK]
+*.[gG][iI][nN]
+*.[dD][dD][sS]
+*.[vV][pP]6
+*.[mM][aA][dD]
+*.[aA][sS][fF]
+*.[iI][sS][oO]
+
+# --- Artefak analisis / lift yang memuat isi biner ---
 work/
 *.analysis.exe
+catalog.json
+*seeds*.json
 *.idb
 *.i64
 *.gzf
 *.dxvk-cache
 
-# Third-party online mod binaries (local reference only)
-onlinemod/
+# --- Rahasia penandatanganan APK ---
+*.jks
+*.keystore
+keystore.properties
+local.properties
 
-# Lifted server.dll (derived from the game binary)
-src/recomp/gen_server/
-
-# Tester diagnostic reports
+# --- Log, crash dump, laporan diagnostik (memuat alamat/memori guest) ---
+logs/*
+!logs/.gitkeep
+NFSU2-diagnostics-*.zip
 NFSU2-diagnostico-*.zip
 
+# --- Biner mod online pihak ketiga (hanya referensi lokal) ---
+onlinemod/
 
-build_full.gradle
-rename_package.sh
+# --- Berkas sementara workflow ---
+notes.md
